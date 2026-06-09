@@ -1,1 +1,275 @@
 
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Customer Support Project</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+</head>
+<body>
+
+<div class="chat-container">
+
+    <h1>🤖 AI Customer Support Assistant</h1>
+
+    {% if uploaded_file %}
+    <div class="upload-success">
+        ✅ PDF Loaded: {{ uploaded_file }}
+    </div>
+    {% endif %}
+
+    <div id="chat-box">
+
+        <div class="bot-message">
+            Welcome! Ask me anything about our store.
+        </div>
+
+    </div>
+
+    <div class="input-area">
+
+        <input
+            type="text"
+            id="user-input"
+            placeholder="Type your question..."
+        >
+
+        <button onclick="sendMessage()">
+            Send
+        </button>
+
+        <button onclick="startVoice()">
+            🎤 Voice
+        </button>
+
+        <button onclick="saveChat()">
+            Save Chat
+        </button>
+
+        <button onclick="clearChat()">
+            Clear Chat
+        </button>
+        <button onclick="toggleDarkMode()">
+    🌙 Dark Mode
+</button>
+<button onclick="showStats()">
+📊 Statistics
+</button>
+
+        <form
+            action="/upload"
+            method="POST"
+            enctype="multipart/form-data"
+        >
+
+            <input
+                type="file"
+                name="pdf"
+                accept=".pdf"
+            >
+
+            <button type="submit">
+                Upload PDF
+            </button>
+
+        </form>
+
+    </div>
+
+</div>
+
+<script>
+
+document.getElementById("user-input")
+.addEventListener("keypress", function(event){
+
+    if(event.key === "Enter"){
+        sendMessage();
+    }
+
+});
+
+function sendMessage() {
+
+    let input =
+        document.getElementById("user-input");
+
+    let message =
+        input.value.trim();
+
+    if(message === "")
+        return;
+
+    let chatBox =
+        document.getElementById("chat-box");
+
+    // User message
+    chatBox.innerHTML += `
+        <div class="user-message">
+            ${message}
+        </div>
+    `;
+
+    fetch("/get", {
+
+        method: "POST",
+
+        headers: {
+            "Content-Type":
+            "application/x-www-form-urlencoded"
+        },
+
+        body:
+        "message=" + encodeURIComponent(message)
+
+    })
+   
+
+    .then(response => response.json())
+
+    .then(data => {
+
+        chatBox.innerHTML += `
+            <div class="bot-message">
+                ${data.response.replace(/\n/g, "<br>")}
+                <br><br>
+        <b>Sentiment:</b> ${data.sentiment}
+            </div>
+        `;
+
+        speak(data.response);
+
+        chatBox.scrollTop =
+            chatBox.scrollHeight;
+
+    })
+
+    .catch(error => {
+
+        console.error(error);
+
+        chatBox.innerHTML += `
+            <div class="bot-message">
+                Error connecting to server.
+            </div>
+        `;
+    });
+
+    input.value = "";
+}
+
+function startVoice() {
+
+    const recognition =
+        new (
+            window.SpeechRecognition ||
+            window.webkitSpeechRecognition
+        )();
+
+    recognition.lang = "en-IN";
+
+    recognition.start();
+
+    recognition.onresult = function(event) {
+
+        let text =
+            event.results[0][0].transcript;
+
+        document.getElementById(
+            "user-input"
+        ).value = text;
+
+        sendMessage();
+    };
+
+    recognition.onerror = function(event) {
+
+        alert(
+            "Voice Error: " +
+            event.error
+        );
+    };
+}
+
+function saveChat() {
+
+    let chat =
+        document.getElementById(
+            "chat-box"
+        ).innerText;
+
+    let blob =
+        new Blob(
+            [chat],
+            {type:"text/plain"}
+        );
+
+    let link =
+        document.createElement("a");
+
+    link.href =
+        URL.createObjectURL(blob);
+
+    link.download =
+        "chat_history.txt";
+
+    document.body.appendChild(link);
+
+    link.click();
+
+    document.body.removeChild(link);
+}
+
+function clearChat() {
+
+    document.getElementById(
+        "chat-box"
+    ).innerHTML = `
+
+        <div class="bot-message">
+            Welcome! Ask me anything about our store.
+        </div>
+
+    `;
+}
+
+function speak(text) {
+
+    const speech =
+        new SpeechSynthesisUtterance(text);
+
+    speech.lang = "en-IN";
+    speech.rate = 1;
+    speech.pitch = 1;
+
+    window.speechSynthesis.speak(speech);
+}
+function toggleDarkMode() {
+
+    document.body.classList.toggle("dark-mode");
+
+}
+function showStats(){
+
+    fetch("/stats")
+    .then(response => response.json())
+    .then(data => {
+
+        alert(
+            "Total Messages: " + data.total +
+            "\nPositive: " + data.positive +
+            "\nNeutral: " + data.neutral +
+            "\nNegative: " + data.negative
+        );
+
+    });
+}
+</script>
+
+</body>
+</html>
+
+
