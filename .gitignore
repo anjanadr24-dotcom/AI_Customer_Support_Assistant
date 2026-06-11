@@ -1,0 +1,10 @@
+# Ignore everything inside the uploads folder
+uploads/*
+
+# Ignore python caching systems
+__pycache__/
+*.pyc
+
+# Ignore local transactional histories and databases
+chat_history.txt
+*.db
